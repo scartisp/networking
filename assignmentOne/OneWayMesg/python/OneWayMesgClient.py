@@ -21,7 +21,7 @@ sock = socket(AF_INET, SOCK_STREAM)
 
 # Connect to the server
 sock.connect((serverName, serverPort))
-print(f"Connected to server at ('{serverName}', '{serverPort}')");
+print(f"Connected to server at ('{serverName}', '{serverPort}')")
 
 # Make a file stream out of socket
 sockFile = sock.makefile(mode='w')
