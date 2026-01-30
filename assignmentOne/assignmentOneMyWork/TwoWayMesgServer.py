@@ -41,20 +41,19 @@ while True:
     # If no message ==> client closed the connection
     if not message:
         print('Client closed connection')
-        clientSockFileIn.close()
-        clientSockFileOut.close()
-        clientSock.close()
         break
     # Display the line
     print('Client:', message, end='')
-    
+    # Send the line to client
     toClient = stdin.readline()
     clientSockFileOut.write(toClient)
     clientSockFileOut.flush()
-
+    # if server sends nothing (inputted EOF char)==> server closed the connection
     if not toClient:
         print('Server closed connection')
-        clientSockFileIn.close()
-        clientSockFileOut.close()
-        clientSock.close()
         break
+
+#done 
+clientSockFileIn.close()
+clientSockFileOut.close()
+clientSock.close()
