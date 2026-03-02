@@ -46,7 +46,7 @@ def send_message(sock, sockFile):
         except Exception:
             pass
 
-def receive_message(sock, sockFile):
+def receive_message(sock: socket, sockFile: socket):
     try:
         while not stop_event.is_set():
             line = sockFile.readline()

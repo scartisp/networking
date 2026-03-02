@@ -78,7 +78,7 @@ def receive_message(clientSock, clientSockFile):
         except Exception:
             pass
 
-# start threads (no need to make them daemon since main waits on stop_event)
+# start threads
 Thread(target=send_message, args=(clientSock, clientSockFile,),daemon=True).start()
 Thread(target=receive_message, args=(clientSock, clientSockFile,),daemon=True).start()
 
