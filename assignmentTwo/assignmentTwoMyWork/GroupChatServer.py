@@ -26,7 +26,7 @@ def cleanClients(clients, toRemove: list[socket]):
         clients.pop(c)
 
 def readMessage(clients):
-    readable, writable, exceptReady= select(([serverSock]+list(clients.keys())), list(clients.keys()), [])
+    readable, writable, exceptReady= select(([serverSock]+list(clients.keys())), list(clients.keys()), [], 1)
     readable: list[socket]
     writable: list[socket]
     toRemove = []
