@@ -21,6 +21,10 @@ serverSock.setblocking(False)
 #create a list for the sockets
 clients = {}
 
+def cleanClients(clients, toRemove: list[socket]):
+    for c in toRemove:
+        clients.pop(c)
+
 def readMessage(clients):
     readable, writable, exceptReady= select(([serverSock]+list(clients.keys())), list(clients.keys()), [])
     readable: list[socket]
@@ -49,10 +53,6 @@ def readMessage(clients):
                     sockFileOut.close()
                     sockFileIn.close()
     cleanClients(clients, toRemove)
-
-def cleanClients(clients, toRemove: list[socket]):
-    for c in toRemove:
-        clients.pop(c)
 
 print('waiting for clients to connect...')
 try:

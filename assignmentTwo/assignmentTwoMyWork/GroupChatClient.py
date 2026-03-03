@@ -32,7 +32,7 @@ def sendMessage(clientSock: socket, sockFileWrite):
             sockFileWrite.flush()
 
             if not line:
-                print('client closing conneciton')
+              #  print('client closing conneciton')
                 try:
                     clientSock.shutdown(SHUT_RDWR)
                 except Exception:
@@ -52,7 +52,7 @@ def receiveMessage(clientSock: socket, sockFileRead):
             print(line, end='')
             
             if not line:
-                print('server closed conneciton')
+                #print('server closed conneciton')
                 try:
                     clientSock.shutdown(SHUT_RDWR)
                 except Exception:
@@ -70,6 +70,7 @@ Thread(target=receiveMessage, args=(clientSock, sockFileRead), daemon=True).star
 
 stopEvent.wait()
 
+print('closing')
 sockFileWrite.close()
 sockFileRead.close()
 clientSock.close()
