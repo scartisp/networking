@@ -50,6 +50,15 @@ def receiveMessage(clientSock: socket, sockFileRead):
         while not stopEvent.is_set():
             line = sockFileRead.readline()
             print(line, end='')
+            
+            if not line:
+                print('server closed conneciton')
+                try:
+                    clientSock.shutdown(SHUT_RDWR)
+                except Exception:
+                    pass
+                stopEvent.set()
+                break
     except Exception:
         stopEvent.set()
         print('client closing connection')

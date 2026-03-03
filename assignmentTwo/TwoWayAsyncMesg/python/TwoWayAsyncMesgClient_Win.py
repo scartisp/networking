@@ -1,95 +1,79 @@
-# client_minimal_fix.py
+# Implementation of the two-way async message client in python
+
+# Import socket related methods
 from socket import *
+
+# Import argv related methods
 from sys import *
+
+# Import select method
 from select import *
+
+# Import thread API
 import threading
 from threading import Thread
-from socket import SHUT_RDWR
 
+# Client needs server's contact information
 if len(argv) != 3:
     print("usage:", argv[0], "<server name> <server port>")
     exit()
 
+# Get server's whereabouts
 serverName = argv[1]
 serverPort = int(argv[2])
 
+# Create a socket
 sock = socket(AF_INET, SOCK_STREAM)
+
+# Connect to the server
 sock.connect((serverName, serverPort))
-print(f"Connected to server at ('{serverName}', '{serverPort}')")
+print(f"Connected to server at ('{serverName}', '{serverPort}')");
 
+# Make a file stream out of socket
 sockFile = sock.makefile(mode='r')
-serverSockFileOut = sock.makefile(mode="w")
-
-stop_event = threading.Event()
 
 def send_message(sock, sockFile):
-    try:
-        while not stop_event.is_set():
-            line = stdin.readline()
-            serverSockFileOut.write(line)
-            serverSockFileOut.flush()
+	try:
+		while True:
+			# Read a line form the keyboard
+			line = stdin.readline()
+			
+			# If EOF ==> client wants to close connection
+			if not line:
+			    print('*** Client closing connection')
+			    break
+			
+			# Send the line to client
+			sock.send(line.encode())
+		
+		# Close the connection
+		sockFile.close()
+		sock.close()
 
-            if not line:  # EOF => client wants to close connection
-                print('*** Client closing connection')
-                try:
-                    sock.shutdown(SHUT_RDWR)
-                except Exception:
-                    pass
-                stop_event.set()
-                break
-    except Exception:
-        stop_event.set()
-        print('*** Client closing connection')
-    finally:
-        try:
-            serverSockFileOut.close()
-        except Exception:
-            pass
+	except:
+		print('*** Client closing connection')
 
-def receive_message(sock: socket, sockFile: socket):
-    try:
-        while not stop_event.is_set():
-            line = sockFile.readline()
-            if not line:  # EOF => server closed connection
-                print('*** Server closed connection')
-                stop_event.set()
-                try:
-                    sock.shutdown(SHUT_RDWR)
-                except Exception:
-                    pass
-                break
-            print('Server:', line, end='')
-    except Exception:
-        stop_event.set()
-        print('*** Server closed connection')
-    finally:
-        try:
-            sockFile.close()
-        except Exception:
-            pass
+def receive_message(sock, sockFile):
+	try:
+		while True:
+			# Read a message from the client
+			line = sockFile.readline()
+			
+			# If EOF ==> client closed the connection
+			if not line:
+			    print('*** Server closed connection')
+			    break
+			    
+			# Display the line
+			print('Server:', line, end='')
+		
+		# Close the connection
+		sockFile.close()
+		sock.close()
 
-Thread(target=send_message, args=(sock, sockFile,),daemon=True).start()
-Thread(target=receive_message, args=(sock, sockFile,),daemon=True).start()
+	except:
+		print('*** Server closed connection')
 
-# wait until stop_event set by either thread
-stop_event.wait()
+Thread(target=send_message, args=(sock, sockFile, )).start()  
+Thread(target=receive_message, args=(sock, sockFile,)).start()
 
-# final cleanup
-try:
-    sockFile.close()
-except Exception:
-    pass
-try:
-    serverSockFileOut.close()
-except Exception:
-    pass
-try:
-    sock.shutdown(SHUT_RDWR)
-except Exception:
-    pass
-try:
-    sock.close()
-except Exception:
-    pass
-
-print('Client exiting')

@@ -1,5 +1,4 @@
 # Written by: Simion Cartis
-#TODO: make it so that you can actually kill the execution of this program (maybe just keyboard interrupt is ok?)
 
 #TODO refactor code
 
@@ -20,16 +19,10 @@ serverSock.listen()
 serverSock.setblocking(False)
 
 #create a list for the sockets
-clients = [serverSock] #TODO, since clients doesn't just hold clients, maybe change its name to sockets?
+clients = {}
 
-# def acceptClients():
-#     clientSock, clientAddr = serverSock.accept()
-#     clientSock.setblocking(False)
-#     print('client at address ', clientAddr, ' connected')
-#     clients.append(clientSock)
-
-def readMessage(clients: list[socket]):
-    readable, writable, exceptReady= select(clients, clients, clients) #TODO, do I need the third arg?
+def readMessage(clients):
+    readable, writable, exceptReady= select(([serverSock]+list(clients.keys())), list(clients.keys()), [])
     readable: list[socket]
     writable: list[socket]
     toRemove = []
@@ -38,33 +31,37 @@ def readMessage(clients: list[socket]):
             clientSock, clientAddr = serverSock.accept()
             clientSock.setblocking(False)
             print('client at address ', clientAddr, ' connected')
-            clients.append(clientSock)
+            clients[clientSock] = clientAddr
         else:
             sockFileIn = r.makefile(mode='r')
             line = sockFileIn.readline()
             if not line:
-                print('client with socket disconnected') #TODO how can I pass the clientAddr to this print? make clients a dictionary?
+                print('client at ', clients.get(r), ' disconnected')
                 toRemove.append(r)
             else:
+                line = 'client at ' + str(clients.get(r)) + ' sent: '+ line
                 for w in writable:
-                    if w in toRemove or w is r or w is serverSock:
+                    if w in toRemove or w is r:
                         continue
                     sockFileOut = w.makefile(mode='w')
-                    sockFileOut.write(line) #TODO add client address that sent message (def need to make it a dictionary)
+                    sockFileOut.write(line)
                     sockFileOut.flush()
                     sockFileOut.close()
                     sockFileIn.close()
     cleanClients(clients, toRemove)
 
-def cleanClients(clients: list[socket], toRemove: list[socket]):
+def cleanClients(clients, toRemove: list[socket]):
     for c in toRemove:
-        clients.remove(c)
+        clients.pop(c)
 
 print('waiting for clients to connect...')
 try:
     while True:
-        # acceptClients()
         readMessage(clients)
 except KeyboardInterrupt:
-    for c in clients:
+    serverSock.close()
+    for c in list(clients.keys()):
+        sockFileOut = c.makefile(mode='w')
+        sockFileOut.write(chr(26))
+        sockFileOut.close()
         c.close()
