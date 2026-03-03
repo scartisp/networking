@@ -1,7 +1,4 @@
 #Written by: Simion Cartis
-#TODO: make the double "client disconnected message" not be double, optimize code
-
-#TODO find out how to properly end threads
 #imports
 from sys import *
 from socket import *
