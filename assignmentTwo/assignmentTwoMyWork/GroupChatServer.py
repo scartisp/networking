@@ -1,6 +1,6 @@
 # Written by: Simion Cartis
 
-#TODO refactor code
+#TODO REFACTOR THIS CODE, AND COMMENT IT. FOR THE LOOOOOVE OF GOD (AHHHHHHHHHHHHHHHH)
 
 #imports
 from sys import *
@@ -26,33 +26,41 @@ def cleanClients(clients, toRemove: list[socket]):
         clients.pop(c)
 
 def readMessage(clients):
-    readable, writable, exceptReady= select(([serverSock]+list(clients.keys())), list(clients.keys()), [], 1)
+    readable, writable, _= select(([serverSock]+list(clients.keys())), list(clients.keys()), [], 1)
     readable: list[socket]
     writable: list[socket]
     toRemove = []
     for r in readable:
         if r is serverSock:
             clientSock, clientAddr = serverSock.accept()
+            rSock = clientSock.makefile(mode='r')
+            wSock = clientSock.makefile(mode='w')
             clientSock.setblocking(False)
             print('client at address ', clientAddr, ' connected')
-            clients[clientSock] = clientAddr
+            clients[clientSock] = {'addr': clientAddr, 'rSock': rSock, 'wSock': wSock}
         else:
-            sockFileIn = r.makefile(mode='r')
-            line = sockFileIn.readline()
+            #sockFileIn = r.makefile(mode='r')
+            rInfo = clients.get(r)
+            rSock = rInfo['rSock']
+            line = rSock.readline()
             if not line:
-                print('client at ', clients.get(r), ' disconnected')
+                print('client at ', rInfo['addr'], ' disconnected')
+                rSock.close()
+                rInfo['wSock'].close()
                 r.close()
                 toRemove.append(r)
             else:
-                line = 'client at ' + str(clients.get(r)) + ' sent: '+ line
+                line = 'client at ' + str(rInfo['addr']) + ' sent: '+ line
                 for w in writable:
                     if w in toRemove or w is r:
                         continue
-                    sockFileOut = w.makefile(mode='w')
-                    sockFileOut.write(line)
-                    sockFileOut.flush()
-                    sockFileOut.close()
-                sockFileIn.close()
+                    wInfo = clients.get(w)
+                    wSock = wInfo['wSock']
+                    #sockFileOut = w.makefile(mode='w')
+                    wSock.write(line)
+                    wSock.flush()
+                 #   wSock.close()
+                #rSock.close()
     cleanClients(clients, toRemove)
 
 print('waiting for clients to connect...')
@@ -65,4 +73,6 @@ except KeyboardInterrupt:
         sockFileOut = c.makefile(mode='w')
         sockFileOut.write(chr(26))
         sockFileOut.close()
+        clients.get(c)['rSock'].close()
+        clients.get(c)['wSock'].close()
         c.close()
