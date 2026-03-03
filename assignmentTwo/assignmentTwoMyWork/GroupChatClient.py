@@ -23,54 +23,54 @@ sockFileWrite = clientSock.makefile(mode='w')
 sockFileRead = clientSock.makefile(mode='r')
 
 stopEvent = threading.Event()
+closeLock = threading.Lock()
+closed = False
 
-def sendMessage(clientSock: socket, sockFileWrite):
+def closeThreads():
+    global closed
+    with closeLock:
+        if closed:
+            return
+        closed = True
+        
+        clientSock.shutdown(SHUT_RDWR)
+        sockFileWrite.close()
+        sockFileRead.close()
+        clientSock.close()
+
+        
+
+def sendMessage(sockFileWrite):
     try:
         while not stopEvent.is_set():
             line = stdin.readline()
             sockFileWrite.write(line)
             sockFileWrite.flush()
-
             if not line:
-              #  print('client closing conneciton')
-                try:
-                    clientSock.shutdown(SHUT_RDWR)
-                except Exception:
-                    pass
                 stopEvent.set()
                 break
     except Exception:
         stopEvent.set()
         print('client closing connection')
-    finally:
-        sockFileWrite.close()
 
-def receiveMessage(clientSock: socket, sockFileRead):
+def receiveMessage(sockFileRead):
     try:
         while not stopEvent.is_set():
             line = sockFileRead.readline()
-            print(line, end='')
-            
             if not line:
-                #print('server closed conneciton')
-                try:
-                    clientSock.shutdown(SHUT_RDWR)
-                except Exception:
-                    pass
                 stopEvent.set()
                 break
+            print(line, end='')
     except Exception:
         stopEvent.set()
         print('client closing connection')
-    finally:
-        sockFileRead.close()
 
-Thread(target=sendMessage, args=(clientSock, sockFileWrite), daemon=True).start()
-Thread(target=receiveMessage, args=(clientSock, sockFileRead), daemon=True).start()
+threadSend = Thread(target=sendMessage, args=(sockFileWrite,), daemon=True)
+threadReceive = Thread(target=receiveMessage, args=(sockFileRead,))
+threadSend.start()
+threadReceive.start()
 
 stopEvent.wait()
-
+closeThreads()
+threadReceive.join()
 print('closing')
-sockFileWrite.close()
-sockFileRead.close()
-clientSock.close()
