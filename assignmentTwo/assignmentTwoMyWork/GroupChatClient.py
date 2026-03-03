@@ -30,40 +30,24 @@ def sendMessage(clientSock: socket, sockFileWrite):
             line = stdin.readline()
             sockFileWrite.write(line)
             sockFileWrite.flush()
-
             if not line:
-              #  print('client closing conneciton')
-                try:
-                    clientSock.shutdown(SHUT_RDWR)
-                except Exception:
-                    pass
                 stopEvent.set()
                 break
     except Exception:
         stopEvent.set()
         print('client closing connection')
-    finally:
-        sockFileWrite.close()
 
 def receiveMessage(clientSock: socket, sockFileRead):
     try:
         while not stopEvent.is_set():
             line = sockFileRead.readline()
             print(line, end='')
-            
             if not line:
-                #print('server closed conneciton')
-                try:
-                    clientSock.shutdown(SHUT_RDWR)
-                except Exception:
-                    pass
                 stopEvent.set()
                 break
     except Exception:
         stopEvent.set()
         print('client closing connection')
-    finally:
-        sockFileRead.close()
 
 Thread(target=sendMessage, args=(clientSock, sockFileWrite), daemon=True).start()
 Thread(target=receiveMessage, args=(clientSock, sockFileRead), daemon=True).start()
@@ -71,6 +55,9 @@ Thread(target=receiveMessage, args=(clientSock, sockFileRead), daemon=True).star
 stopEvent.wait()
 
 print('closing')
+clientSock.shutdown(SHUT_RDWR)
+sockFileWrite.flush()
 sockFileWrite.close()
 sockFileRead.close()
 clientSock.close()
+print('closed')
