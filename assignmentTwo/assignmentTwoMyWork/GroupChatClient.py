@@ -26,7 +26,9 @@ stopEvent = threading.Event()
 closeLock = threading.Lock()
 closed = False
 
-def closeThreads():
+#method for closing threads without causing race conditions. Not strictly necessary,
+#as only the main thread can call this
+def closeSockets():
     global closed
     with closeLock:
         if closed:
@@ -65,12 +67,12 @@ def receiveMessage(sockFileRead):
         stopEvent.set()
         print('client closing connection')
 
-threadSend = Thread(target=sendMessage, args=(sockFileWrite,), daemon=True)
+threadSend = Thread(target=sendMessage, args=(sockFileWrite,), daemon=True) #daemon thread because stdin.readline() is blocking, so kill thread when main thread exits
 threadReceive = Thread(target=receiveMessage, args=(sockFileRead,))
 threadSend.start()
 threadReceive.start()
 
 stopEvent.wait()
-closeThreads()
+closeSockets()
 threadReceive.join()
 print('closing')
