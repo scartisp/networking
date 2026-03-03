@@ -6,7 +6,7 @@
 from sys import *
 from socket import *
 import threading
-from threading import Thread
+from threading import *
 
 if len(argv) != 3:
     print("usage:", argv[0], "<server name> <server port>")
@@ -43,10 +43,7 @@ def sendMessage(clientSock: socket, sockFileWrite):
         stopEvent.set()
         print('client closing connection')
     finally:
-        try:
-            sockFileWrite.close()
-        except Exception:
-            pass
+        sockFileWrite.close()
 
 def receiveMessage(clientSock: socket, sockFileRead):
     try:
@@ -57,24 +54,13 @@ def receiveMessage(clientSock: socket, sockFileRead):
         stopEvent.set()
         print('client closing connection')
     finally:
-        try:
-            sockFileRead.close()
-        except Exception:
-            pass
+        sockFileRead.close()
 
 Thread(target=sendMessage, args=(clientSock, sockFileWrite), daemon=True).start()
 Thread(target=receiveMessage, args=(clientSock, sockFileRead), daemon=True).start()
 
 stopEvent.wait()
-try:
-    sockFileWrite.close()
-except Exception:
-    pass
-try:
-    sockFileRead.close()
-except Exception:
-    pass
-try:
-    clientSock.close()
-except Exception:
-    pass
+
+sockFileWrite.close()
+sockFileRead.close()
+clientSock.close()
