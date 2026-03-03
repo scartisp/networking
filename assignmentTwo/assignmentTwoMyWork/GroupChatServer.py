@@ -41,6 +41,7 @@ def readMessage(clients):
             line = sockFileIn.readline()
             if not line:
                 print('client at ', clients.get(r), ' disconnected')
+                r.close()
                 toRemove.append(r)
             else:
                 line = 'client at ' + str(clients.get(r)) + ' sent: '+ line
@@ -51,7 +52,7 @@ def readMessage(clients):
                     sockFileOut.write(line)
                     sockFileOut.flush()
                     sockFileOut.close()
-                    sockFileIn.close()
+                sockFileIn.close()
     cleanClients(clients, toRemove)
 
 print('waiting for clients to connect...')
