@@ -1,7 +1,4 @@
 #Written by: Simion Cartis
-#TODO: make the double "client disconnected message" not be double, optimize code
-
-#TODO find out how to properly end threads
 #imports
 from sys import *
 from socket import *
@@ -23,41 +20,58 @@ sockFileWrite = clientSock.makefile(mode='w')
 sockFileRead = clientSock.makefile(mode='r')
 
 stopEvent = threading.Event()
+closeLock = threading.Lock()
+closed = False
 
-def sendMessage(clientSock: socket, sockFileWrite):
+#method for closing threads without causing race conditions. Not strictly necessary,
+#as only the main thread can call this
+def closeSockets():
+    global closed #set lock so that two threads don't try to access func at once
+    with closeLock:
+        if closed: #if this function has already ran, don't try to run it again, simply return
+            return
+        closed = True
+        
+        clientSock.shutdown(SHUT_RDWR) #NECESSARY FOR CLEARNING BUFFERS, SUCH AS THE READING MAKEFILE
+        sockFileWrite.close()
+        sockFileRead.close()
+        clientSock.close()
+
+        
+#function for writing to a server
+def sendMessage(sockFileWrite):
     try:
         while not stopEvent.is_set():
             line = stdin.readline()
             sockFileWrite.write(line)
             sockFileWrite.flush()
-            if not line:
+            if not line: #receive an EOF, break the while loop, ending the thread and terminating stopEvent.wait()
                 stopEvent.set()
                 break
     except Exception:
         stopEvent.set()
         print('client closing connection')
 
-def receiveMessage(clientSock: socket, sockFileRead):
+#function for receiving from server
+def receiveMessage(sockFileRead):
     try:
         while not stopEvent.is_set():
             line = sockFileRead.readline()
-            print(line, end='')
             if not line:
                 stopEvent.set()
                 break
+            print(line, end='')
     except Exception:
         stopEvent.set()
         print('client closing connection')
 
-Thread(target=sendMessage, args=(clientSock, sockFileWrite), daemon=True).start()
-Thread(target=receiveMessage, args=(clientSock, sockFileRead), daemon=True).start()
+#threads for executing these functions asynchronously (I don't think select would work on windows here)
+threadSend = Thread(target=sendMessage, args=(sockFileWrite,), daemon=True) #daemon thread because stdin.readline() is blocking, so kill thread when main thread exits
+threadReceive = Thread(target=receiveMessage, args=(sockFileRead,))
+threadSend.start()
+threadReceive.start()
 
 stopEvent.wait()
-
+closeSockets()
+threadReceive.join() #join the non-daemon if it hasn't already ended by now
 print('closing')
-clientSock.shutdown(SHUT_RDWR)
-sockFileWrite.flush()
-sockFileWrite.close()
-sockFileRead.close()
-clientSock.close()
-print('closed')
